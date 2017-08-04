@@ -121,6 +121,8 @@ pub unsafe fn reset_handler() {
         capsules::bootloader::Bootloader::new(&sam4l::usart::USART0,
             &mut sam4l::flashcalw::FLASH_CONTROLLER,
             &sam4l::gpio::PA[08],
+            &sam4l::gpio::PA[13],
+            &sam4l::gpio::PB[14],
                      &mut PAGEBUFFER,
                      &mut capsules::bootloader::BUF));
     hil::uart::UART::set_client(&sam4l::usart::USART0, bootloader);
@@ -141,6 +143,16 @@ pub unsafe fn reset_handler() {
         led: led,
         ipc: kernel::ipc::IPC::new(),
     };
+
+
+
+    sam4l::gpio::PA[13].enable();
+    sam4l::gpio::PA[13].enable_output();
+    sam4l::gpio::PA[13].clear();
+
+    sam4l::gpio::PB[14].enable();
+    sam4l::gpio::PB[14].enable_output();
+    sam4l::gpio::PB[14].clear();
 
     hail.bootloader.initialize();
 

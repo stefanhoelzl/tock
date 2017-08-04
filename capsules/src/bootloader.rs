@@ -20,6 +20,8 @@ pub struct Bootloader<'a, U: hil::uart::UARTAdvanced + 'a, F: hil::flash::Flash 
     uart: &'a U,
     flash: &'a F,
     select_pin: &'a G,
+    led: &'a G,
+    dpin: &'a G,
     /// Buffer correctly sized for the underlying flash page size.
     page_buffer: TakeCell<'a, F::Page>,
     // in_progress: Cell<Option<AppId>>,
@@ -28,7 +30,7 @@ pub struct Bootloader<'a, U: hil::uart::UARTAdvanced + 'a, F: hil::flash::Flash 
 }
 
 impl<'a, U: hil::uart::UARTAdvanced + 'a, F: hil::flash::Flash + 'a, G: hil::gpio::Pin + 'a> Bootloader<'a, U, F, G> {
-    pub fn new(uart: &'a U, flash: &'a F, select_pin: &'a G,
+    pub fn new(uart: &'a U, flash: &'a F, select_pin: &'a G, led: &'a G, dpin: &'a G,
                page_buffer: &'static mut F::Page,
                buffer: &'static mut [u8])
                -> Bootloader<'a, U, F, G> {
@@ -36,6 +38,8 @@ impl<'a, U: hil::uart::UARTAdvanced + 'a, F: hil::flash::Flash + 'a, G: hil::gpi
             uart: uart,
             flash: flash,
             select_pin: select_pin,
+            led: led,
+            dpin: dpin,
             // in_progress: Cell::new(None),
             page_buffer: TakeCell::new(page_buffer),
             buffer: TakeCell::new(buffer),
@@ -44,7 +48,21 @@ impl<'a, U: hil::uart::UARTAdvanced + 'a, F: hil::flash::Flash + 'a, G: hil::gpi
     }
 
     pub fn initialize(&self) {
+
+        // Setup UART and start listening.
+        self.uart.init(hil::uart::UARTParams {
+            baud_rate: 115200,
+            stop_bits: hil::uart::StopBits::One,
+            parity: hil::uart::Parity::None,
+            hw_flow_control: false,
+        });
+
+
+
+        // self.select_pin.enable();
         self.select_pin.make_input();
+
+
 
         // Check the select pin to see if we should enter bootloader mode.
         let mut samples = 10000;
@@ -62,15 +80,16 @@ impl<'a, U: hil::uart::UARTAdvanced + 'a, F: hil::flash::Flash + 'a, G: hil::gpi
         if active > inactive {
             // Looks like we do want bootloader mode.
 
-            // Setup UART and start listening.
-            self.uart.init(hil::uart::UARTParams {
-                baud_rate: 115200,
-                stop_bits: hil::uart::StopBits::One,
-                parity: hil::uart::Parity::None,
-                hw_flow_control: false,
+
+
+
+
+            self.buffer.take().map(|buffer| {
+                self.dpin.toggle();
+                self.uart.receive_automatic(buffer, 250);
             });
 
-            self.buffer.take().map(|buffer| self.uart.receive_automatic(buffer, 250));
+
 
 
         } else {
@@ -206,6 +225,9 @@ impl<'a, U: hil::uart::UARTAdvanced + 'a, F: hil::flash::Flash + 'a, G: hil::gpi
                         buffer: &'static mut [u8],
                         rx_len: usize,
                         _error: hil::uart::Error) {
+
+self.led.toggle();
+self.dpin.toggle();
 
 
         if rx_len >= 2 {

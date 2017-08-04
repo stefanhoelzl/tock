@@ -49,6 +49,7 @@ pub mod usb;
 pub mod usb_user;
 pub mod usbc_client;
 pub mod net;
+#[macro_use]
 pub mod ieee802154;
 pub mod temperature;
 pub mod humidity;
