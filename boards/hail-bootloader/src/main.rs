@@ -12,7 +12,6 @@ extern crate kernel;
 extern crate sam4l;
 
 use capsules::console::{self, Console};
-use capsules::timer::TimerDriver;
 use capsules::virtual_alarm::{MuxAlarm, VirtualMuxAlarm};
 use kernel::Platform;
 use kernel::hil;

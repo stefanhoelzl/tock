@@ -2,7 +2,6 @@
 
 use core::cell::Cell;
 use core::cmp;
-use kernel::{AppId, AppSlice, Container, Callback, Shared, Driver, ReturnCode};
 use kernel::common::take_cell::TakeCell;
 use kernel::hil;
 use kernel::process::Error;
