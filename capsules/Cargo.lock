@@ -3,9 +3,26 @@ name = "capsules"
 version = "0.1.0"
 dependencies = [
  "kernel 0.1.0",
+ "tockloader-proto 0.2.0 (git+https://github.com/thejpster/tockloader-proto-rs)",
 ]
+
+[[package]]
+name = "byteorder"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "kernel"
 version = "0.1.0"
 
+[[package]]
+name = "tockloader-proto"
+version = "0.2.0"
+source = "git+https://github.com/thejpster/tockloader-proto-rs#f9d7d4e3853db8c4bf3d9348f2f99bca2decc3e3"
+dependencies = [
+ "byteorder 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[metadata]
+"checksum byteorder 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ff81738b726f5d099632ceaffe7fb65b90212e8dce59d518729e7e8634032d3d"
+"checksum tockloader-proto 0.2.0 (git+https://github.com/thejpster/tockloader-proto-rs)" = "<none>"

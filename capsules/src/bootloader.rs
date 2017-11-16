@@ -1,5 +1,10 @@
 //! Implements the Tock bootloader.
 
+
+extern crate tockloader_proto;
+
+// use tockloader_proto as btldr;
+
 use core::cell::Cell;
 use core::cmp;
 use kernel::common::take_cell::TakeCell;
@@ -228,25 +233,49 @@ impl<'a, U: hil::uart::UARTAdvanced + 'a, F: hil::flash::Flash + 'a, G: hil::gpi
 self.led.toggle();
 self.dpin.toggle();
 
+        let mut decoder = tockloader_proto::CommandDecoder::new();
 
-        if rx_len >= 2 {
-            // Check for escape character then the command byte.
-
-            if buffer[rx_len-2] == ESCAPE_CHAR && buffer[rx_len-1] != ESCAPE_CHAR {
-                // This looks like a valid command.
-
-                match buffer[rx_len-1] {
-                    CMD_PING => {
-                        buffer[0] = ESCAPE_CHAR;
-                        buffer[1] = RES_PONG;
-
-                        self.uart.transmit(buffer, 2);
+        let ret = decoder.read(buffer, |&cmd| {
+            match cmd {
+                tockloader_proto::Command::Ping => {
+                    match tockloader_proto::ResponseEncoder::new(&tockloader_proto::Response::Pong) {
+                        Ok(response) => {
+                            match response.next() {
+                                Some(byte) => {
+                                    buffer[0] = byte;
+                                }
+                                _ => {}
+                            }
+                        }
+                        e => {}
                     }
 
-                    _ => {}
                 }
+                _ => {}
             }
-        }
+        });
+
+
+
+
+        // if rx_len >= 2 {
+        //     // Check for escape character then the command byte.
+        //
+        //     if buffer[rx_len-2] == ESCAPE_CHAR && buffer[rx_len-1] != ESCAPE_CHAR {
+        //         // This looks like a valid command.
+        //
+        //         match buffer[rx_len-1] {
+        //             CMD_PING => {
+        //                 buffer[0] = ESCAPE_CHAR;
+        //                 buffer[1] = RES_PONG;
+        //
+        //                 self.uart.transmit(buffer, 2);
+        //             }
+        //
+        //             _ => {}
+        //         }
+        //     }
+        // }
     }
 }
 

@@ -1,7 +1,10 @@
 [package]
+authors = ["Tock Project Developers <tock-dev@googlegroups.com>"]
 name = "capsules"
 version = "0.1.0"
-authors = ["Tock Project Developers <tock-dev@googlegroups.com>"]
 
-[dependencies]
-kernel = { path = "../kernel" }
+[dependencies.kernel]
+path = "../kernel"
+
+[dependencies.tockloader-proto]
+git = "https://github.com/thejpster/tockloader-proto-rs"
