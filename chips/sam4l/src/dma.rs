@@ -2,7 +2,8 @@
 
 use core::{cmp, intrinsics};
 use core::cell::Cell;
-use kernel::common::regs::{ReadOnly, ReadWrite, WriteOnly};
+use core::ops::{BitAnd, BitOr, Not, Shr, Shl};
+use kernel::common::regs::{IntLike, ReadOnly, ReadWrite, WriteOnly};
 use kernel::common::take_cell::TakeCell;
 use pm;
 
@@ -11,7 +12,8 @@ use pm;
 #[allow(dead_code)]
 struct DMARegisters {
     mar: ReadWrite<u32, MemoryAddress::Register>,
-    psr: ReadWrite<u32, PeripheralSelect::Register>,
+    psr: ReadWrite<DMAPeripheral>,
+    _psr_padding: [u8; 3],
     tcr: ReadWrite<u32, TransferCounter::Register>,
     marr: ReadWrite<u32, MemoryAddressReload::Register>,
     tcrr: ReadWrite<u32, TransferCounter::Register>,
@@ -124,7 +126,7 @@ pub enum DMAChannelNum {
 /// means transfer data from peripheral to memory, `*_TX` means transfer data
 /// from memory to peripheral.
 #[allow(non_camel_case_types)]
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 #[repr(u8)]
 pub enum DMAPeripheral {
     USART0_RX = 0,
@@ -165,6 +167,52 @@ pub enum DMAPeripheral {
     AESA_TX = 36,
     LCDCA_ACMDR_TX = 37,
     LCDCA_ABMDR_TX = 38,
+}
+
+impl IntLike for DMAPeripheral {
+    fn zero() -> Self {
+        DMAPeripheral::USART0_RX
+    }
+}
+
+impl BitAnd for DMAPeripheral {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self {
+        (self as u32) & (rhs as u32)
+    }
+}
+
+impl BitOr for DMAPeripheral {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self {
+        self | rhs
+    }
+}
+
+impl Not for DMAPeripheral {
+    type Output = Self;
+
+    fn not(self) -> Self {
+        !self
+    }
+}
+
+impl Shr<u32> for DMAPeripheral {
+    type Output = Self;
+
+    fn shr(self, rhs: u32) -> Self {
+        self >> rhs
+    }
+}
+
+impl Shl<u32> for DMAPeripheral {
+    type Output = Self;
+
+    fn shl(self, rhs: u32) -> Self {
+        self << rhs
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -261,7 +309,8 @@ impl DMAChannel {
     pub fn handle_interrupt(&mut self) {
         let registers: &DMARegisters = unsafe { &*self.registers };
         registers.idr.write(Interrupt::TERR::SET + Interrupt::TRC::SET + Interrupt::RCZ::SET);
-        let channel = registers.psr.read(PeripheralSelect::PID);
+        // let channel = registers.psr.read(PeripheralSelect::PID);
+        let channel = registers.psr.get();
 
         self.client.get().as_mut().map(|client| {
             client.xfer_done(channel);
@@ -286,7 +335,8 @@ impl DMAChannel {
         len = cmp::min(len, maxlen);
         registers.mr.write(Mode::SIZE.val(self.width.get() as u32));
 
-        registers.psr.write(PeripheralSelect::PID.val(pid as u32));
+        // registers.psr.write(PeripheralSelect::PID.val(pid as u32));
+        registers.psr.set(pid);
         registers.marr.write(MemoryAddressReload::MARV.val(&buf[0] as *const u8 as u32));
         registers.tcr.write(TransferCounter::TCV.val(len as u32));
 
