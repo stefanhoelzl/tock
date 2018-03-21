@@ -1,7 +1,7 @@
 //! Implements the Tock bootloader.
 
 
-extern crate tockloader_proto;
+// extern crate tockloader_proto;
 
 // use tockloader_proto as btldr;
 
@@ -233,27 +233,27 @@ impl<'a, U: hil::uart::UARTAdvanced + 'a, F: hil::flash::Flash + 'a, G: hil::gpi
 self.led.toggle();
 self.dpin.toggle();
 
-        let mut decoder = tockloader_proto::CommandDecoder::new();
-
-        let ret = decoder.read(buffer, |&cmd| {
-            match cmd {
-                tockloader_proto::Command::Ping => {
-                    match tockloader_proto::ResponseEncoder::new(&tockloader_proto::Response::Pong) {
-                        Ok(response) => {
-                            match response.next() {
-                                Some(byte) => {
-                                    buffer[0] = byte;
-                                }
-                                _ => {}
-                            }
-                        }
-                        e => {}
-                    }
-
-                }
-                _ => {}
-            }
-        });
+        // let mut decoder = tockloader_proto::CommandDecoder::new();
+        //
+        // let ret = decoder.read(buffer, |&cmd| {
+        //     match cmd {
+        //         tockloader_proto::Command::Ping => {
+        //             match tockloader_proto::ResponseEncoder::new(&tockloader_proto::Response::Pong) {
+        //                 Ok(response) => {
+        //                     match response.next() {
+        //                         Some(byte) => {
+        //                             buffer[0] = byte;
+        //                         }
+        //                         _ => {}
+        //                     }
+        //                 }
+        //                 e => {}
+        //             }
+        //
+        //         }
+        //         _ => {}
+        //     }
+        // });
 
 
 
