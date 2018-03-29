@@ -47,8 +47,9 @@ void _start(void* text_start,
             void* app_heap_break __attribute__((unused))) {
 
   // Allocate stack and data. `brk` to STACK_SIZE + got_size + data_size +
-  // bss_size from start of memory
-  uint32_t stacktop = (uint32_t)mem_start + STACK_SIZE;
+  // bss_size from start of memory. The stack must be aligned to a multiple of
+  // 4 so enforce that here.
+  uint32_t stacktop = (uint32_t)mem_start + (STACK_SIZE & 0xFFFFFFFC);
   struct hdr* myhdr = (struct hdr*)text_start;
 
   {
