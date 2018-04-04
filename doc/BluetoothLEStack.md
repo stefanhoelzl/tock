@@ -13,7 +13,7 @@ using an `allow` system call.
 
 ### Advertising
 
-For advertising, the sytsem call interface allows a process to configure an
+For advertising, the system call interface allows a process to configure an
 advertising payload, advertising event type, scan response payload, interval and
 tx power. Permissible advertising types include:
 
@@ -37,7 +37,7 @@ scanning or establishing connections) are not permissible:
   * Connect request
 
 Scan response are sent automatically if a scan response payload is configured.
-Scan rerequest and connection requests are handled by other parts of the sytsem
+Scan request and connection requests are handled by other parts of the system
 call interface.
 
 To set up an advertisement:
@@ -83,38 +83,43 @@ cases to meet timing constraints.
 
 ```rust
 pub trait BleRadio {
-    /// Sets the channel on which to transmit or recieve packets.
+    /// Sets the channel on which to transmit or receive packets.
     ///
-    /// Returns ReturnCode::EBUSY if the radio is currently transmiting or
-    /// recieving, otherwise ReturnCode::Success.
+    /// Returns ReturnCode::EBUSY if the radio is currently transmitting or
+    /// receiving, otherwise ReturnCode::Success.
     fn set_channel(&self, channel: RadioChannel) -> ReturnCode;
 
     /// Sets the transmit power
     ///
-    /// Returns ReturnCode::EBUSY if the radio is currently transmiting or
-    /// recieving, otherwise ReturnCode::Success.
+    /// Returns ReturnCode::EBUSY if the radio is currently transmitting or
+    /// receiving, otherwise ReturnCode::Success.
     fn set_tx_power(&self, power: u8) -> ReturnCode;
 
     /// Transmits a packet over the radio
     ///
-    /// Returns ReturnCode::EBUSY if the radio is currently transmiting or
-    /// recieving, otherwise ReturnCode::Success.
+    /// Returns ReturnCode::EBUSY if the radio is currently transmitting or
+    /// receiving, otherwise ReturnCode::Success.
     fn transmit_packet(
         &self,
         buf: &'static mut [u8],
-        disable: bool,
-        len: usize) -> ReturnCode;
+        disable: bool) -> ReturnCode;
 
-    /// Recieves a packet of at most `buf.len()` size
+    /// Receives a packet of at most `buf.len()` size
     ///
-    /// Returns ReturnCode::EBUSY if the radio is currently transmiting or
-    /// recieving, otherwise ReturnCode::Success.
+    /// Returns ReturnCode::EBUSY if the radio is currently transmitting or
+    /// receiving, otherwise ReturnCode::Success.
     fn receive_packet(&self, buf: &'static mut [u8]) -> ReturnCode;
 
+    // FIXME: explain this
     fn abort_tx(&self) -> Option<&'static mut [u8]>;
 
+    // FIXME: explain this
     fn abort_rx(&self) -> Option<&'static mut [u8]>;
 
+    // Disable periodic advertisements
+    //
+    // Returns always ReturnCode::SUCCESS because it does not respect whether
+    // the driver is actively advertising or not
     fn disable(&self) -> ReturnCode;
 }
 
