@@ -255,7 +255,7 @@ behavior may change in future versions of `libtock`.
 Today, `main` is called from `_start` and includes an implicit `while()` loop:
 
 ```c
-void _start(void* text_start, void* mem_start, void* memory_len, void* app_heap_break) {
+void _start(void* app_start, void* mem_start, void* memory_len, void* app_heap_break) {
   main();
   while (1) {
     yield();

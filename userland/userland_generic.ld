@@ -20,46 +20,10 @@ MEMORY {
 }
 
 SECTIONS {
-    /* Text section, Code! */
+    /* Text section, Code! This needs to be first. */
     .text :
     {
         _text = .;
-        /**
-         * Populate the header expected by `crt0`:
-         *
-         *
-         *  struct hdr {
-         *    uint32_t got_sym_start;
-         *    uint32_t got_start;
-         *    uint32_t got_size;
-         *    uint32_t data_sym_start;
-         *    uint32_t data_start;
-         *    uint32_t data_size;
-         *    uint32_t bss_start;
-         *    uint32_t bss_size;
-         *    uint32_t reldata_start;
-         *  };
-         */
-        /* Offset of GOT symbols in flash */
-        LONG(LOADADDR(.got) - _text);
-        /* Offset of GOT section in memory */
-        LONG(_got);
-        /* Size of GOT section */
-        LONG(SIZEOF(.got));
-        /* Offset of data symbols in flash */
-        LONG(LOADADDR(.data) - _text);
-        /* Offset of data section in memory */
-        LONG(_data);
-        /* Size of data section */
-        LONG(SIZEOF(.data));
-        /* Offset of BSS section in memory */
-        LONG(_bss);
-        /* Size of BSS section */
-        LONG(SIZEOF(.bss));
-        /* First address offset after program flash, where elf2tbf places
-         * .rel.data section */
-        LONG(LOADADDR(.endsec) - _text);
-
         KEEP (*(.start))
         *(.text*)
         *(.rodata*)
@@ -68,7 +32,6 @@ SECTIONS {
         *(.ARM.extab*)
         . = ALIGN(4); /* Make sure we're word-aligned here */
     } > FLASH =0xFF
-
 
     /* App state section. Used for persistent app data. */
     .app_state :
@@ -101,30 +64,6 @@ SECTIONS {
         KEEP(*(.bss*))
         *(COMMON)
     } > SRAM
-
-    /*
-     * __NOTE__: The following symbols are used only to hint to elf2tbf how much
-     * total memory to request from the OS.
-     */
-    .stack :
-    {
-        . += STACK_SIZE;
-    } > SRAM
-
-    .app_heap :
-    {
-        . += APP_HEAP_SIZE;
-    } > SRAM
-
-    .kernel_heap :
-    {
-        . += KERNEL_HEAP_SIZE;
-    } > SRAM
-
-    _sram_end = .;
-    .endsec :
-    {
-    } > FLASH
 
     /* ARM Exception support
      *
