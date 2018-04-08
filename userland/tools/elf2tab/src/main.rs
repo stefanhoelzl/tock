@@ -361,23 +361,23 @@ fn elf_to_tbf(
     }
 
     // Write the header and actual app to a binary file.
-    try!(output.write_all(tbfheader.generate().unwrap().get_ref()));
+    output.write_all(tbfheader.generate().unwrap().get_ref())?;
 
     if include_crt0_header {
         try!(output.write_all(unsafe { as_byte_slice(&crtheader) }));
     }
 
-    try!(output.write_all(appstate.data.as_ref()));
-    try!(util::do_pad(output, post_appstate_pad as usize));
+    output.write_all(appstate.data.as_ref())?;
+    util::do_pad(output, post_appstate_pad as usize)?;
 
-    try!(output.write_all(text.data.as_ref()));
-    try!(util::do_pad(output, post_text_pad as usize));
+    output.write_all(text.data.as_ref())?;
+    util::do_pad(output, post_text_pad as usize)?;
 
-    try!(output.write_all(got.data.as_ref()));
-    try!(util::do_pad(output, post_got_pad as usize));
+    output.write_all(got.data.as_ref())?;
+    util::do_pad(output, post_got_pad as usize)?;
 
-    try!(output.write_all(data.data.as_ref()));
-    try!(util::do_pad(output, post_data_pad as usize));
+    output.write_all(data.data.as_ref())?;
+    util::do_pad(output, post_data_pad as usize)?;
 
     let rel_data_len: [u8; 4] = [
         (rel_data.len() & 0xff) as u8,
@@ -385,12 +385,12 @@ fn elf_to_tbf(
         (rel_data.len() >> 16 & 0xff) as u8,
         (rel_data.len() >> 24 & 0xff) as u8,
     ];
-    try!(output.write_all(&rel_data_len));
-    try!(output.write_all(rel_data.as_ref()));
-    try!(util::do_pad(output, post_reldata_pad as usize));
+    output.write_all(&rel_data_len)?;
+    output.write_all(rel_data.as_ref())?;
+    util::do_pad(output, post_reldata_pad as usize)?;
 
     // Pad to get a power of 2 sized flash app.
-    try!(util::do_pad(output, post_content_pad as usize));
+    util::do_pad(output, post_content_pad as usize)?;
 
     Ok(())
 }
