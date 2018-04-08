@@ -1,21 +1,23 @@
+extern crate chrono;
 extern crate elf;
 extern crate getopts;
+extern crate tar;
 
 use getopts::Options;
 use std::cmp;
 use std::env;
-use std::fs::File;
-use std::io;
 use std::fmt;
-use std::io::Write;
+use std::fmt::Write as fmtwrite;
+use std::fs;
+use std::io;
+use std::io::{Seek, Write};
 use std::mem;
-use std::path::Path;
+use std::path;
 use std::slice;
 
 #[macro_use]
 mod util;
 mod header;
-
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -24,8 +26,18 @@ fn main() {
     opts.reqopt("o", "", "set output file name", "OUTFILE");
     opts.optopt("n", "", "set package name", "PACKAGE_NAME");
     opts.reqopt("", "stack", "set stack size in bytes", "STACK_SIZE");
-    opts.reqopt("", "app-heap", "set app heap size in bytes", "APP_HEAP_SIZE");
-    opts.reqopt("", "kernel-heap", "set kernel heap size in bytes", "KERNEL_HEAP_SIZE");
+    opts.reqopt(
+        "",
+        "app-heap",
+        "set app heap size in bytes",
+        "APP_HEAP_SIZE",
+    );
+    opts.reqopt(
+        "",
+        "kernel-heap",
+        "set kernel heap size in bytes",
+        "KERNEL_HEAP_SIZE",
+    );
     opts.optflag("", "crt0-header", "include crt0 header for PIC fixups");
     opts.optflag("v", "verbose", "be verbose");
 
@@ -42,31 +54,80 @@ fn main() {
     // Get the memory requirements from the app.
     let stack_len = matches.opt_str("stack").unwrap().parse::<u32>().unwrap();
     let app_heap_len = matches.opt_str("app-heap").unwrap().parse::<u32>().unwrap();
-    let kernel_heap_len = matches.opt_str("kernel-heap").unwrap().parse::<u32>().unwrap();
+    let kernel_heap_len = matches
+        .opt_str("kernel-heap")
+        .unwrap()
+        .parse::<u32>()
+        .unwrap();
 
-    let input = if !matches.free.is_empty() {
-        matches.free[0].clone()
-    } else {
+    // Check that we have at least one input file elf to process.
+    if matches.free.is_empty() {
         print_usage(&program, opts);
         return;
     };
-    let path = Path::new(&input);
-    let file = match elf::File::open_path(&path) {
-        Ok(f) => f,
-        Err(e) => panic!("Error: {:?}", e),
-    };
 
-    match output {
-        None => panic!("Need to specify an output file"),
-        Some(name) => match File::create(Path::new(&name)) {
-            Ok(mut f) => do_work(&file, &mut f, package_name, include_crt0_header, verbose, stack_len, app_heap_len, kernel_heap_len),
-            Err(e) => panic!("Error: {:?}", e),
-        },
-    }.expect("Failed to write output");
+    // Create the metadata.toml file needed for the TAB file.
+    let mut metadata_toml = String::new();
+    write!(
+        &mut metadata_toml,
+        "tab-version = 1
+name = \"{}\"
+only-for-boards = \"\"
+build-date = {}",
+        package_name.clone().unwrap(),
+        chrono::prelude::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+    ).unwrap();
+
+    // Start creating a tar archive which will be the .tab file.
+    let tab_name = fs::File::create(path::Path::new(&output.unwrap())).unwrap();
+    let mut tab = tar::Builder::new(tab_name);
+
+    // Add the metadata file without creating a real file on the filesystem.
+    let mut header = tar::Header::new_gnu();
+    header.set_size(metadata_toml.as_bytes().len() as u64);
+    header.set_mode(0o644);
+    header.set_cksum();
+    tab.append_data(&mut header, "metadata.toml", metadata_toml.as_bytes())
+        .unwrap();
+
+    // Iterate all input elfs. Convert them to Tock friendly binaries and then
+    // add them to the TAB file.
+    for input_elf in matches.free {
+        let elf_path = path::Path::new(&input_elf);
+        let bin_path = path::Path::new(&input_elf).with_extension("bin");
+
+        let elffile = elf::File::open_path(&elf_path).unwrap();
+        // Get output file as both read/write for creating the binary and
+        // adding it to the TAB tar file.
+        let mut outfile: fs::File = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(bin_path.clone())
+            .unwrap();
+
+        // Do the conversion to a tock binary.
+        elf_to_tbf(
+            &elffile,
+            &mut outfile,
+            package_name.clone(),
+            include_crt0_header,
+            verbose,
+            stack_len,
+            app_heap_len,
+            kernel_heap_len,
+        ).unwrap();
+
+        // Add the file to the TAB tar file.
+        outfile.seek(io::SeekFrom::Start(0)).unwrap();
+        tab.append_file(bin_path.file_name().unwrap(), &mut outfile)
+            .unwrap();
+    }
 }
 
 fn print_usage(program: &str, opts: Options) {
-    let brief = format!("Usage: {} [-o OUTFILE] FILE", program);
+    let brief = format!("Usage: {} [-o OUTFILE] FILE [FILE...]", program);
     print!("{}", opts.usage(&brief));
 }
 
@@ -113,7 +174,7 @@ struct Crt0Header {
     bss_start: u32,
     // Size of BSS section
     bss_size: u32,
-    // First address offset after program flash, where elf2tbf places
+    // First address offset after program flash, where elf2tab places
     // .rel.data section
     reldata_start: u32,
     // Offset of the text (program code) section in flash
@@ -165,7 +226,7 @@ unsafe fn as_byte_slice<'a, T: Copy>(input: &'a T) -> &'a [u8] {
     slice::from_raw_parts(input as *const T as *const u8, mem::size_of::<T>())
 }
 
-fn do_work(
+fn elf_to_tbf(
     input: &elf::File,
     output: &mut Write,
     package_name: Option<String>,
@@ -284,8 +345,8 @@ fn do_work(
     // in flash. Typically the protected region only includes the TBF header.
     // To calculate the offset we need to find the function in the binary
     // and then add the offset to the start of the .text section.
-    let init_fn_offset = (input.ehdr.entry - text.shdr.addr) as u32 +
-        (section_start_text - app_start) as u32;
+    let init_fn_offset =
+        (input.ehdr.entry - text.shdr.addr) as u32 + (section_start_text - app_start) as u32;
 
     // Now we can update the header with key values that we have now calculated.
     tbfheader.set_total_size(total_size as u32);
@@ -298,7 +359,6 @@ fn do_work(
             print!("{}", crtheader);
         }
     }
-
 
     // Write the header and actual app to a binary file.
     try!(output.write_all(tbfheader.generate().unwrap().get_ref()));

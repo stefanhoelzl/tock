@@ -28,7 +28,7 @@ struct hdr {
   uint32_t bss_start;
   // Size of BSS section
   uint32_t bss_size;
-  // First address offset after program flash, where elf2tbf places
+  // First address offset after program flash, where elf2tab places
   // .rel.data section
   uint32_t reldata_start;
   // Offset of the text (program code) section in flash
