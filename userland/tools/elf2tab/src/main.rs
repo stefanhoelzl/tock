@@ -52,13 +52,21 @@ fn main() {
     let include_crt0_header = matches.opt_present("crt0-header");
 
     // Get the memory requirements from the app.
-    let stack_len = matches.opt_str("stack").unwrap().parse::<u32>().unwrap();
-    let app_heap_len = matches.opt_str("app-heap").unwrap().parse::<u32>().unwrap();
+    let stack_len = matches
+        .opt_str("stack")
+        .unwrap()
+        .parse::<u32>()
+        .expect("Stack size must be an integer.");
+    let app_heap_len = matches
+        .opt_str("app-heap")
+        .unwrap()
+        .parse::<u32>()
+        .expect("App heap size must be an integer.");
     let kernel_heap_len = matches
         .opt_str("kernel-heap")
         .unwrap()
         .parse::<u32>()
-        .unwrap();
+        .expect("Kernel heap size must be an integer.");
 
     // Check that we have at least one input file elf to process.
     if matches.free.is_empty() {
@@ -79,7 +87,8 @@ build-date = {}",
     ).unwrap();
 
     // Start creating a tar archive which will be the .tab file.
-    let tab_name = fs::File::create(path::Path::new(&output.unwrap())).unwrap();
+    let tab_name = fs::File::create(path::Path::new(&output.unwrap()))
+        .expect("Could not create the output file.");
     let mut tab = tar::Builder::new(tab_name);
 
     // Add the metadata file without creating a real file on the filesystem.
@@ -96,7 +105,7 @@ build-date = {}",
         let elf_path = path::Path::new(&input_elf);
         let bin_path = path::Path::new(&input_elf).with_extension("bin");
 
-        let elffile = elf::File::open_path(&elf_path).unwrap();
+        let elffile = elf::File::open_path(&elf_path).expect("Could not open the .elf file.");
         // Get output file as both read/write for creating the binary and
         // adding it to the TAB tar file.
         let mut outfile: fs::File = fs::OpenOptions::new()

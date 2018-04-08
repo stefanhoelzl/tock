@@ -262,21 +262,16 @@ impl TbfHeader {
         let mut wordbuf = [0u8; 4];
         let mut checksum: u32 = 0;
         loop {
-            let ret = header_buf.read(&mut wordbuf);
-            match ret {
-                Ok(count) => {
-                    // Combine the bytes back into a word, handling if we don't
-                    // get a full word.
-                    let mut word = 0;
-                    for i in 0..count {
-                        word |= (wordbuf[i] as u32) << (8 * i);
-                    }
-                    checksum ^= word;
-                    if count != 4 {
-                        break;
-                    }
-                }
-                Err(_) => println!("Error calculating checksum."),
+            let count = header_buf.read(&mut wordbuf)?;
+            // Combine the bytes back into a word, handling if we don't
+            // get a full word.
+            let mut word = 0;
+            for i in 0..count {
+                word |= (wordbuf[i] as u32) << (8 * i);
+            }
+            checksum ^= word;
+            if count != 4 {
+                break;
             }
         }
 
