@@ -112,25 +112,25 @@ struct {name}Registers {{
 {fields}
 }}
 """
+    @staticmethod
+    def get_register_size(dev, reg):
+        size = reg._size
+        if size is None and reg.parent:
+            size = reg.parent.size
+        if size is None and dev.size:
+            size = dev.size
+        if size is None:
+            raise Exception(
+                "Cant figure out size of register {}".format(reg.name)
+            )
+        if size not in [8, 16, 32]:
+            raise Exception(
+                "Invalid size {} of register {}".format(size, reg.name)
+            )
+        return size
 
     @staticmethod
     def fields(name, peripheral, dev):
-        def get_register_size(reg):
-            size = reg._size
-            if size is None and reg.parent:
-                size = reg.parent.size
-            if size is None and dev.size:
-                size = dev.size
-            if size is None:
-                raise Exception(
-                    "Cant figure out size of register {}".format(reg.name)
-                )
-            if size not in [8, 16, 32]:
-                raise Exception(
-                    "Invalid size {} of register {}".format(size, reg.name)
-                )
-            return size
-
         fields = []
         offset = 0
         cnt = 0
@@ -142,7 +142,7 @@ struct {name}Registers {{
                 cnt += 1
                 offset += diff
             if offset == register.address_offset:
-                size = get_register_size(register)
+                size = PeripheralStruct.get_register_size(dev, register)
                 fields.append(PeripheralStructField(register, size))
                 offset += size / 8
             else:
