@@ -177,7 +177,7 @@ class PeripheralStructField(CodeBlock):
         def definition(reg):
             if len(reg._fields) == 1:
                 return ""
-            return ", {}::Register".format(reg.name)
+            return ", {}::Register".format(identifier(reg.name))
 
         mode_map = {
             "read-only": "ReadOnly",
